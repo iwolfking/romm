@@ -171,6 +171,13 @@ async def _run_minerva_batch(
 
     cfg = cm.get_config().DOWNLOAD
 
+    # Clear stale cancellation markers for this batch so a ROM cancelled in an
+    # earlier run can still be retried.
+    for _item in items:
+        _CANCELLED_DOWNLOAD_KEYS.discard(str(_item.id))
+        if _item.file_name:
+            _CANCELLED_DOWNLOAD_KEYS.discard(_item.file_name)
+
     import asyncio
     import os
     import re
@@ -194,6 +201,10 @@ async def _run_minerva_batch(
     )
     staging_root = library_path / "_minerva_staging"
     staging_root.mkdir(parents=True, exist_ok=True)
+    try:
+        staging_root.chmod(0o777)
+    except OSError:
+        pass
 
     async with httpx.AsyncClient(
         base_url=base,
@@ -229,6 +240,10 @@ async def _run_minerva_batch(
         for item in items:
             job_dir = staging_root / re.sub(r"[^A-Za-z0-9_.-]", "_", item.file_name)
             job_dir.mkdir(parents=True, exist_ok=True)
+            try:
+                job_dir.chmod(0o777)
+            except OSError:
+                pass
             try:
                 if {str(item.id), str(item.file_name)} & _CANCELLED_DOWNLOAD_KEYS:
                     await socket_handler.emit_to_user(
@@ -419,13 +434,74 @@ async def _run_minerva_batch(
                     continue
 
                 # Wait for the selected file to be fully flushed to disk.
+                # qBittorrent may keep the finished file in its incomplete/temp
+                # directory instead of the requested save path. Search the
+                # save path plus any temp path qBittorrent reports so a file
+                # that has effectively finished still gets moved into RomM.
+                from pathlib import Path
+
+                candidate_roots: list[str] = [
+                    str(job_dir),
+                    "/downloads",
+                    "/romm/library",
+                ]
+                try:
+                    prefs = await client.get("/api/v2/app/preferences")
+                    if prefs.status_code == 200:
+                        prefs_json = prefs.json()
+                        temp_enabled = bool(prefs_json.get("temp_path_enabled"))
+                        temp_path = (
+                            prefs_json.get("temp_path") if temp_enabled else None
+                        )
+                        if temp_path and temp_path not in candidate_roots:
+                            candidate_roots.append(str(temp_path))
+                        save_path = prefs_json.get("save_path")
+                        if save_path and save_path not in candidate_roots:
+                            candidate_roots.append(str(save_path))
+                    props = await client.get(
+                        "/api/v2/torrents/properties", params={"hash": torrent_hash}
+                    )
+                    if props.status_code == 200:
+                        props_json = props.json()
+                        prop_save = props_json.get("save_path")
+                        if prop_save and prop_save not in candidate_roots:
+                            candidate_roots.append(str(prop_save))
+                except Exception as exc:  # noqa: BLE001
+                    log.debug("Could not resolve qBittorrent paths: %s", exc)
+
+                # Ask qBittorrent to relocate the content into the expected
+                # staging directory. qBittorrent otherwise leaves a
+                # partially-selected torrent in its incomplete directory.
+                if selected_progress >= 1:
+                    try:
+                        await client.post(
+                            "/api/v2/torrents/setLocation",
+                            data={
+                                "hashes": torrent_hash,
+                                "location": str(job_dir),
+                            },
+                        )
+                        await asyncio.sleep(15)
+                    except Exception as exc:  # noqa: BLE001
+                        log.debug("Could not relocate torrent content: %s", exc)
+
                 found = None
-                for _ in range(60):
-                    for path in job_dir.rglob(item.file_name):
+                for _ in range(300):
+                    for root in candidate_roots:
                         try:
-                            size = path.stat().st_size
-                            if item.size is None or size >= item.size or size > 0:
-                                found = path
+                            for path in Path(root).rglob(item.file_name):
+                                try:
+                                    size = path.stat().st_size
+                                    if (
+                                        item.size is None
+                                        or size >= item.size
+                                        or size > 0
+                                    ):
+                                        found = path
+                                        break
+                                except OSError:
+                                    pass
+                            if found:
                                 break
                         except OSError:
                             pass
@@ -434,19 +510,16 @@ async def _run_minerva_batch(
                     await asyncio.sleep(1)
                 if found is None:
                     log.error(
-                        "Selected file did not finish writing: %s", item.file_name
+                        "Selected file did not finish writing: %s (roots=%s)",
+                        item.file_name,
+                        candidate_roots,
                     )
-                    await socket_handler.emit_to_user(
-                        user_id,
-                        "download:progress",
-                        {
-                            "id": item.id,
-                            "file_name": item.file_name,
-                            "progress": 0.0,
-                            "status": "error",
-                        },
+                else:
+                    log.info(
+                        "Located downloaded file at %s for %s",
+                        found,
+                        item.file_name,
                     )
-                    continue
                 if found is None:
                     log.error("Downloaded file not found: %s", item.file_name)
                     await socket_handler.emit_to_user(
@@ -463,6 +536,10 @@ async def _run_minerva_batch(
 
                 target_dir = library_path / "roms" / platform_fs_slug
                 target_dir.mkdir(parents=True, exist_ok=True)
+                try:
+                    target_dir.chmod(0o777)
+                except OSError:
+                    pass
                 shutil.move(str(found), str(target_dir / item.file_name))
                 await client.post(
                     "/api/v2/torrents/delete",
@@ -492,6 +569,10 @@ async def _run_minerva_batch(
                         "status": "error",
                     },
                 )
+            finally:
+                _CANCELLED_DOWNLOAD_KEYS.discard(str(item.id))
+                if item.file_name:
+                    _CANCELLED_DOWNLOAD_KEYS.discard(item.file_name)
 
     if cfg.scan_after_download:
         try:
