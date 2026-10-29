@@ -6,6 +6,7 @@ export const ROUTES = {
   MAIN: "main",
   HOME: "home",
   SEARCH: "search",
+  DOWNLOAD: "download",
   MUSIC: "music",
   PLATFORM: "platform",
   COLLECTION: "collection",
@@ -28,6 +29,7 @@ export const ROUTES = {
   LIBRARY_MANAGEMENT: "library-management",
   SCAN_SETTINGS: "scan-settings",
   CONVERSION_SETTINGS: "conversion-settings",
+  DOWNLOAD_SETTINGS: "download-settings",
   METADATA_SOURCES: "metadata-sources",
   CLIENT_API_TOKENS: "client-api-tokens",
   DEVICES: "devices",
@@ -53,6 +55,7 @@ export const ROUTE_SCOPES: Partial<Record<RouteName, readonly string[]>> = {
   [ROUTES.LIBRARY_MANAGEMENT]: ["platforms.write"],
   [ROUTES.SCAN_SETTINGS]: ["platforms.write"],
   [ROUTES.CONVERSION_SETTINGS]: ["platforms.write"],
+  [ROUTES.DOWNLOAD_SETTINGS]: ["platforms.write"],
   [ROUTES.ADMINISTRATION]: ["users.write"],
   [ROUTES.LOGS]: ["logs.read"],
 };

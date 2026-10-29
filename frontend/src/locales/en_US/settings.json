@@ -88,6 +88,7 @@
   "conversion-library-format-desc": "The format each platform's matched games are stored in when the library is converted. The original files are replaced.",
   "conversion-library-format-leave": "Leave as is",
   "conversion-settings": "Conversion settings",
+  "download-settings": "Download settings",
   "conversion-settings-load-error-desc": "The conversion settings could not be loaded from the server. Editing is disabled to avoid overwriting your existing configuration.",
   "conversion-settings-load-error-title": "Unable to load conversion settings",
   "conversion-settings-save-error": "Unable to save conversion settings: {detail}",

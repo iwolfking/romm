@@ -119,6 +119,12 @@ const groups = computed<Group[]>(() => {
             heartbeat.value.CONVERTO.ENABLED,
         },
         {
+          icon: "mdi-download-outline",
+          label: t("settings.download-settings"),
+          to: { name: ROUTES.DOWNLOAD_SETTINGS },
+          visible: scopes.value.includes("platforms.write"),
+        },
+        {
           icon: "mdi-database-cog-outline",
           label: t("scan.metadata-sources"),
           to: { name: ROUTES.METADATA_SOURCES },

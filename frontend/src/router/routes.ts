@@ -25,6 +25,7 @@ export const routeComponents: Partial<Record<RouteName, RouteViewLoader>> = {
   // Wave 3: Gallery
   [ROUTES.PLATFORM]: () => import("@/views/Gallery/Platform.vue"),
   [ROUTES.SEARCH]: () => import("@/views/Gallery/Search.vue"),
+  [ROUTES.DOWNLOAD]: () => import("@/views/Download.vue"),
   [ROUTES.MUSIC]: () => import("@/views/Jukebox/index.vue"),
   [ROUTES.COLLECTION]: () => import("@/views/Gallery/Collection.vue"),
   [ROUTES.VIRTUAL_COLLECTION]: () => import("@/views/Gallery/Collection.vue"),
@@ -51,6 +52,8 @@ export const routeComponents: Partial<Record<RouteName, RouteViewLoader>> = {
   [ROUTES.SCAN_SETTINGS]: () => import("@/views/Settings/ScanSettings.vue"),
   [ROUTES.CONVERSION_SETTINGS]: () =>
     import("@/views/Settings/ConversionSettings.vue"),
+  [ROUTES.DOWNLOAD_SETTINGS]: () =>
+    import("@/views/Settings/DownloadSettings.vue"),
   [ROUTES.METADATA_SOURCES]: () =>
     import("@/views/Settings/MetadataSources.vue"),
   [ROUTES.CLIENT_API_TOKENS]: () =>

@@ -15,6 +15,7 @@ from config.config_manager import (
     VALID_GAMELIST_THUMBNAIL_TYPES,
     VALID_SCAN_PRIORITY_SOURCES,
     ConvertoConfig,
+    DownloadConfig,
     ExclusionType,
     MetadataMediaType,
 )
@@ -189,6 +190,7 @@ def get_config(request: Request) -> ConfigResponse:
         GAMELIST_MEDIA_IMAGE=cfg.GAMELIST_MEDIA_IMAGE,
         PEGASUS_AUTO_EXPORT_ON_SCAN=cfg.PEGASUS_AUTO_EXPORT_ON_SCAN,
         CONVERTO=cfg.CONVERTO,
+        DOWNLOAD=cfg.DOWNLOAD,
         CONVERTO_LIBRARY_TARGETS={
             slug: sorted(targets)
             for slug, targets in LIBRARY_TARGETS_BY_PLATFORM.items()
@@ -385,3 +387,35 @@ async def update_converto_settings(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message
         ) from exc
     _record_config(request, "converto_settings", "update")
+
+
+class DownloadSettingsPayload(BaseModel):
+    enabled: bool
+    qbittorrent_url: str
+    qbittorrent_username: str
+    qbittorrent_password: str
+    metadata_timeout_seconds: int
+    scan_after_download: bool
+
+
+@protected_route(router.put, "/download", [Scope.PLATFORMS_WRITE])
+async def update_download_settings(
+    request: Request, payload: DownloadSettingsPayload
+) -> None:
+    try:
+        cm.update_download_settings(
+            DownloadConfig(
+                enabled=payload.enabled,
+                qbittorrent_url=payload.qbittorrent_url,
+                qbittorrent_username=payload.qbittorrent_username,
+                qbittorrent_password=payload.qbittorrent_password,
+                metadata_timeout_seconds=payload.metadata_timeout_seconds,
+                scan_after_download=payload.scan_after_download,
+            )
+        )
+    except ConfigNotWritableException as exc:
+        log.critical(exc.message)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=exc.message
+        ) from exc
+    _record_config(request, "download_settings", "update")

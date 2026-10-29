@@ -430,6 +430,16 @@ class ConvertoConfig:
     platform_formats: dict[str, str] = dataclasses.field(default_factory=dict)
 
 
+@dataclasses.dataclass
+class DownloadConfig:
+    enabled: bool = True
+    qbittorrent_url: str = "http://127.0.0.1:8080"
+    qbittorrent_username: str = "admin"
+    qbittorrent_password: str = "adminadmin"
+    metadata_timeout_seconds: int = 60
+    scan_after_download: bool = True
+
+
 # The smallest value each integer converto.* setting accepts.
 CONVERTO_INT_MINIMUMS: Final[dict[str, int]] = {
     "cache_ttl_hours": 1,
@@ -543,6 +553,7 @@ class Config:
     STREAMING_ENABLED: bool
     STREAMING_CONTAINERS: list[StreamingContainer]
     CONVERTO: ConvertoConfig
+    DOWNLOAD: DownloadConfig
 
     def __init__(self, **entries: Any) -> None:
         self.__dict__.update(entries)
@@ -923,6 +934,12 @@ class ConfigManager:
                 **{
                     key: get_nested(self._raw_config, f"converto.{key}", default)
                     for key, default in dataclasses.asdict(ConvertoConfig()).items()
+                }
+            ),
+            DOWNLOAD=DownloadConfig(
+                **{
+                    key: get_nested(self._raw_config, f"download.{key}", default)
+                    for key, default in dataclasses.asdict(DownloadConfig()).items()
                 }
             ),
             STRUCTURE_TEMPLATES=get_nested(
@@ -1517,6 +1534,7 @@ class ConfigManager:
                 },
             },
             "converto": dataclasses.asdict(self.config.CONVERTO),
+            "download": dataclasses.asdict(self.config.DOWNLOAD),
         }
 
         # The streaming section isn't editable at runtime, but it must survive
@@ -1657,6 +1675,11 @@ class ConfigManager:
     def update_converto_settings(self, converto: ConvertoConfig) -> None:
         """Replace the whole converto.* section and persist it to config.yml."""
         self.config.CONVERTO = converto
+        self._update_config_file()
+
+    def update_download_settings(self, download: DownloadConfig) -> None:
+        """Replace the whole download.* section and persist it to config.yml."""
+        self.config.DOWNLOAD = download
         self._update_config_file()
 
 

@@ -22,6 +22,7 @@ import {
 } from "@/router/routes";
 import romApi from "@/services/api/rom";
 import storeAuth from "@/stores/auth";
+import storeConfig from "@/stores/config";
 import storeHeartbeat from "@/stores/heartbeat";
 import storeRoms from "@/stores/roms";
 import type { User } from "@/stores/users";
@@ -115,6 +116,19 @@ const routes = [
           title: "common.search",
         },
         component: routeComponent(ROUTES.SEARCH),
+      },
+      {
+        path: "download",
+        name: ROUTES.DOWNLOAD,
+        meta: {
+          title: "common.download",
+        },
+        component: routeComponent(ROUTES.DOWNLOAD),
+        beforeEnter: () => {
+          if ((storeConfig().config as any)?.DOWNLOAD?.enabled === false) {
+            return { name: ROUTES.HOME };
+          }
+        },
       },
       {
         path: "music/:mode?",
@@ -283,6 +297,15 @@ const routes = [
               bare: true,
             },
             component: routeComponent(ROUTES.CONVERSION_SETTINGS),
+          },
+          {
+            path: "download-settings",
+            name: ROUTES.DOWNLOAD_SETTINGS,
+            meta: {
+              title: "settings.download-settings",
+              bare: true,
+            },
+            component: routeComponent(ROUTES.DOWNLOAD_SETTINGS),
           },
           {
             path: "metadata-sources",

@@ -2,6 +2,7 @@ from typing import TypedDict
 
 from config.config_manager import (
     ConvertoConfig,
+    DownloadConfig,
     EjsControls,
     MetadataMediaType,
     NetplayICEServer,
@@ -46,5 +47,6 @@ class ConfigResponse(TypedDict):
     GAMELIST_MEDIA_IMAGE: MetadataMediaType
     PEGASUS_AUTO_EXPORT_ON_SCAN: bool
     CONVERTO: ConvertoConfig
+    DOWNLOAD: DownloadConfig
     # Platform slug -> the formats its library can be stored in.
     CONVERTO_LIBRARY_TARGETS: dict[str, list[str]]

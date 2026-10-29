@@ -11,8 +11,10 @@ import { computed } from "vue";
 import type { ComputedRef } from "vue";
 import { useI18n } from "vue-i18n";
 import { useRoute } from "vue-router";
+import storeConfig from "@/stores/config";
 
-export type NavDestinationId = "home" | "platforms" | "collections" | "search";
+export type NavDestinationId =
+  "home" | "platforms" | "collections" | "search" | "download";
 
 export interface NavDestination {
   id: NavDestinationId;
@@ -30,6 +32,7 @@ export const NAV_TARGETS: readonly { id: NavDestinationId; to: string }[] = [
   { id: "platforms", to: "/platforms" },
   { id: "collections", to: "/collections" },
   { id: "search", to: "/search" },
+  { id: "download", to: "/download" },
 ];
 
 const NAV_META: Record<NavDestinationId, { labelKey: string; icon: string }> = {
@@ -39,6 +42,7 @@ const NAV_META: Record<NavDestinationId, { labelKey: string; icon: string }> = {
   // keeps the icon stable across every generic "Collections" surface.
   collections: { labelKey: "common.collections", icon: "mdi-bookmark-outline" },
   search: { labelKey: "common.search", icon: "mdi-magnify" },
+  download: { labelKey: "common.download", icon: "mdi-download" },
 };
 
 // `path` is `base` itself or a page under it, so "/platform-x" isn't.
@@ -56,6 +60,7 @@ export function navDestinationAt(path: string): NavDestinationId | null {
     return "collections";
   }
   if (isUnder(path, "/search")) return "search";
+  if (isUnder(path, "/download")) return "download";
   return null;
 }
 
@@ -65,9 +70,15 @@ export function useNavDestinations(): {
 } {
   const { t } = useI18n();
   const route = useRoute();
+  const configStore = storeConfig();
+  const downloadsEnabled = computed(
+    () => (configStore.config as any)?.DOWNLOAD?.enabled !== false,
+  );
 
   const destinations = computed<NavDestination[]>(() =>
-    NAV_TARGETS.map(({ id, to }) => {
+    NAV_TARGETS.filter(
+      ({ id }) => id !== "download" || downloadsEnabled.value,
+    ).map(({ id, to }) => {
       const { labelKey, icon } = NAV_META[id];
       const label = t(labelKey);
       return { id, label, ariaLabel: label, icon, to };

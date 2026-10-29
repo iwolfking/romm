@@ -85,6 +85,10 @@ async function updateConvertoSettings(payload: ConvertoSettingsPayload) {
   );
 }
 
+async function updateDownloadSettings(payload: any) {
+  return api.put<void, AxiosResponse<void>, any>("/config/download", payload);
+}
+
 export default {
   addPlatformBindConfig,
   deletePlatformBindConfig,
@@ -94,4 +98,5 @@ export default {
   deleteExclusion,
   updateScanSettings,
   updateConvertoSettings,
+  updateDownloadSettings,
 };
